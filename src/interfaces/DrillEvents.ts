@@ -127,7 +127,13 @@ const myDrillDefExample: DrillDefinition = {
                     { item: { uri: '...3' }}
                 ]
             }
-        }
+        },
+        {
+            composite: {
+                fromAll: [ { item: { uri: '...1'}}, { item: { identifier: '...2' }} ]
+            }
+        },
+        { composite: { item: { id: '...1' }} }
     ]
 };
 
