@@ -10,7 +10,9 @@ import {
     IDrillEventIntersectionElement,
     IDrillItem,
     IDrillIntersection,
-    isDrillableItemLocalId
+    isDrillableItemLocalId,
+    IDrillPredicate,
+    DrillItemSelector, DrillCompositeItem, DrillCompositionVariants, DrillComposedFromAll, DrillAlternatives
 } from '../../../interfaces/DrillEvents';
 import { VisElementType, VisType, VisualizationTypes } from '../../../constants/visualizationTypes';
 import { isComboChart, isTreemap, isHeatmap } from './common';
@@ -217,3 +219,84 @@ export function cellClick(drillConfig: IDrillConfig, event: ICellDrillEvent, tar
 
     fireEvent(onFiredDrillEvent, data, target);
 }
+
+
+function _andPredicate(predicates: ReadonlyArray<IDrillPredicate>): IDrillPredicate {
+    return {
+        evaluate: (context: AFM.IAfm, drillItem: IDrillItem): boolean => {
+            return predicates.every((predicate) => predicate.evaluate(context, drillItem));
+        }
+    }
+}
+
+function _orPredicate(predicates: ReadonlyArray<IDrillPredicate>): IDrillPredicate {
+    return {
+        evaluate: (context: AFM.IAfm, drillItem: IDrillItem): boolean => {
+            return predicates.some((predicate) => predicate.evaluate(context, drillItem));
+        }
+    }
+}
+
+function _isIdentifierOrUriMatch(expected: IDrillableItem, got: IDrillableItem): boolean {
+    return got !== null && (
+                (expected.identifier && got.identifier && expected.identifier === got.identifier) ||
+                (expected.uri && got.uri && expected.uri === got.uri)
+    );
+}
+
+function _exactMatch(expected: IDrillableItem): IDrillPredicate {
+    return {
+        evaluate: (context: AFM.IAfm, drillItem: IDrillItem): boolean => {
+            // based on isDrillable()
+
+            return  _isIdentifierOrUriMatch(expected, drillItem) ||
+                    (isDrillableItemLocalId(drillItem) &&
+                        _isIdentifierOrUriMatch(expected, getMeasureUriOrIdentifier(context, drillItem.localIdentifier)));
+        }
+    }
+}
+
+function _compositionMatch(_expected: IDrillableItem): IDrillPredicate {
+    return {
+        evaluate: (_context: AFM.IAfm, _drillItem: IDrillItem): boolean => {
+            // TODO matching composites (e.g. arithmetic measures)
+            return false;
+        }
+    }
+}
+
+
+function isDrillAlternatives(drill: any): drill is DrillAlternatives {
+    return (drill as DrillAlternatives).alternatives !== undefined;
+}
+
+function isDrillItemSelector(drill: any): drill is DrillItemSelector {
+    return (drill as DrillItemSelector).item !== undefined;
+}
+
+function isDrillComposedItem(drill: any): drill is DrillCompositeItem {
+    return (drill as DrillCompositeItem).composite !== undefined;
+}
+
+function isDrillCompositionVariants(drill: any): drill is DrillCompositionVariants {
+    return (drill as DrillCompositionVariants).variants !== undefined;
+}
+
+function isDrillComposedFromAll(drill: any): drill is DrillComposedFromAll {
+    return (drill as DrillComposedFromAll).fromAll !== undefined;
+}
+
+export function createPredicateFromDefinition(definition: any, composedItem?: boolean): IDrillPredicate {
+    if (isDrillAlternatives(definition)) {
+        return _orPredicate(definition.alternatives.map((def) => createPredicateFromDefinition(def)));
+    } else if (isDrillItemSelector(definition)) {
+        return !!composedItem ? _exactMatch(definition.item) : _compositionMatch(definition.item)
+    } else if (isDrillComposedItem(definition)) {
+        return createPredicateFromDefinition(definition.composite, true);
+    } else if (isDrillCompositionVariants(definition)) {
+        return _orPredicate(definition.variants.map((def) => createPredicateFromDefinition(def, true)));
+    } else if (isDrillComposedFromAll(definition)) {
+        return _andPredicate(definition.fromAll.map((def) => createPredicateFromDefinition(def, true)))
+    }
+}
+

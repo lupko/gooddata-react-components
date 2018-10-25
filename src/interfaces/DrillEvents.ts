@@ -70,3 +70,64 @@ export interface IDrillIntersection {
 export function isDrillableItemLocalId(item: IDrillItem): item is IDrillableItemLocalId {
     return (item as IDrillableItemLocalId).localIdentifier !== undefined;
 }
+
+export interface IDrillPredicate {
+    evaluate(context: AFM.IAfm, item: IDrillItem): boolean;
+}
+
+export type DrillDefinition = DrillAlternatives | DrillItemSelector | DrillCompositeItem;
+
+/**
+ * Matches if some nested predicates match.
+ */
+export type DrillAlternatives = {
+    alternatives: [ DrillDefinition ]
+}
+
+/**
+ * Matches for exactly specified item.
+ */
+export type DrillItemSelector = {
+    item: IDrillableItem
+    userData?: any
+}
+
+/**
+ * Matches if item is a composite fulfilling additional composition criteria
+ */
+export type DrillCompositeItem = {
+    composite: DrillCompositionVariants | DrillComposedFromAll | DrillItemSelector
+    userData?: any
+}
+
+/*
+ * multiple variants to match composite item. variants are evaluated using OR.
+ */
+export type DrillCompositionVariants = {
+    variants: (DrillComposedFromAll | DrillItemSelector)[]
+}
+
+/**
+ * Matches composite item if it is composed from all of the provided items
+ */
+export type DrillComposedFromAll = {
+    fromAll: DrillItemSelector[]
+}
+
+
+const myDrillDefExample: DrillDefinition = {
+    alternatives: [
+        { item: { uri: '...1' }},
+        { item: { uri: '...2' }},
+        { item: { uri: '...3' }},
+        {
+            composite: {
+                variants: [
+                    { fromAll: [ { item: { uri: '...1' }}, { item: { uri: '...2' }} ] },
+                    { item: { uri: '...3' }}
+                ]
+            }
+        }
+    ]
+};
+
