@@ -40,6 +40,7 @@ export interface IChartLimits {
 
 export interface IChartConfig {
     colors?: string[];
+    colorAssignment?: ColorAssignment[]
     type?: VisType;
     legend?: ILegendConfig;
     legendLayout?: string;
@@ -140,4 +141,106 @@ export default class Chart extends React.Component<IChartProps> {
             />
         );
     }
+}
+
+/**
+ * Developer can provide predicate as a function or as a concrete selector.
+ *
+ * Predicate function provides ultimate flexibility and gives power to the developer to do basically anything
+ * they want.
+ *
+ * The color assignment selectors are essentially a declaratively provided predicates.
+ *
+ * For developer convenience, she can provide either selectors or predicates. The first thing SDK does is to unify
+ * this and the coloring algorithm then continues with predicates only
+ */
+export type ColorAssignment = {
+    predicate: ColorAssignmentSelector | ColorAssignmentPredicate,
+    color: string // my_red, rgb(1, 2, 3)
+}
+
+// item type would not be 'any' in the end.. it needs to be an existing type playing role in the colors of items/series
+export type ColorAssignmentPredicate = (item: any) => boolean
+export type ColorAssignmentSelector = AttributeValueSelector | AttributeElementSelector | MetricSelector | AndSelector;
+
+/**
+ * Selector matching particular attribute value. Optionally provide display form so that the matching
+ * is more exact.
+ */
+export type AttributeValueSelector = {
+    attributeValue: {
+        displayFormId?: string
+        value: string
+    }
+}
+
+/**
+ * Selector matching exact attribute element. This is essential to assign color to entities, disregarding
+ * display forms or any other quirks.
+ */
+export type AttributeElementSelector = {
+    attributeElement: {
+        uri: string
+    }
+}
+
+/**
+ * Selector matching particular metric
+ */
+export type MetricSelector = {
+    metric: {
+        uri: string
+    }
+}
+
+/**
+ * Composite selector - item must match all selectors
+ */
+export type AndSelector = {
+    and: ColorAssignmentSelector[]
+}
+
+function isAttributeValueSelector(sel: any): sel is AttributeValueSelector {
+    return (sel as AttributeValueSelector).attributeValue !== undefined;
+}
+
+
+function isAttributeElementSelector(sel: any): sel is AttributeElementSelector {
+    return (sel as AttributeElementSelector).attributeElement !== undefined;
+}
+
+function isMetricSelector(sel: any): sel is MetricSelector {
+    return (sel as MetricSelector).metric !== undefined;
+}
+
+function isAndSelector(sel: any): sel is AndSelector {
+    return (sel as AndSelector).and !== undefined;
+}
+
+/**
+ * Creates predicate from selector.
+ *
+ * @param {ColorAssignmentSelector} sel
+ * @returns {ColorAssignmentPredicate}
+ */
+export function createPredicateFromSelector(sel: ColorAssignmentSelector): ColorAssignmentPredicate {
+    if (isAttributeValueSelector(sel)) {
+        return (item: any): boolean => {
+            return false;
+        }
+    } else if (isAttributeElementSelector(sel)) {
+        return (item: any): boolean => {
+            return false;
+        }
+    } else if (isMetricSelector(sel)) {
+        return (item: any): boolean => {
+            return false;
+        }
+    } else if (isAndSelector(sel)) {
+        return (item: any): boolean => {
+            return sel.and.map((p) => createPredicateFromSelector(p)).every((p) => p(item));
+        }
+    }
+
+    // bang
 }
