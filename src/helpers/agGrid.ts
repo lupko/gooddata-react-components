@@ -9,7 +9,6 @@ import { unwrap } from './utils';
 import { IDrillItem } from '../interfaces/DrillEvents';
 import { IGridHeader, IColumnDefOptions, IGridRow, IGridAdapterOptions } from '../interfaces/AGGrid';
 import { ColDef } from 'ag-grid';
-import { getTreeLeaves } from '../components/core/PivotTable';
 import InjectedIntl = ReactIntl.InjectedIntl;
 
 export const ROW_ATTRIBUTE_COLUMN = 'ROW_ATTRIBUTE_COLUMN';
@@ -503,4 +502,21 @@ export const getParsedFields = (colId: string): string[][] => {
     return colId
         .split(FIELD_SEPARATOR)
         .map((field: string) => (field.split(ID_SEPARATOR)));
+};
+
+export const getTreeLeaves = (tree: any, getChildren = (node: any) => node && node.children) => {
+    const leaves = [];
+    const nodes = Array.isArray(tree) ? [...tree] : [tree];
+    let node;
+    let children;
+    while (
+        // tslint:disable-next-line:no-conditional-assignment ban-comma-operator
+        node = nodes.shift(), children = getChildren(node),
+            ((children && children.length) || (leaves.push(node) && nodes.length))
+        ) {
+        if (children) {
+            nodes.push(...children);
+        }
+    }
+    return leaves;
 };

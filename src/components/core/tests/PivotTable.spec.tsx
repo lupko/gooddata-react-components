@@ -12,7 +12,6 @@ import {
     getGridDataSource,
     RowLoadingElement,
     getDrillRowData,
-    getTreeLeaves,
     indexOfTreeNode,
     getDrillIntersection,
     getSortsFromModel
@@ -20,7 +19,7 @@ import {
 import { oneMeasureDataSource } from '../../tests/mocks';
 import { pivotTableWithColumnAndRowAttributes } from '../../../../stories/test_data/fixtures';
 import { LoadingComponent } from '../../simple/LoadingComponent';
-import { executionToAGGridAdapter, getParsedFields } from '../../../helpers/agGrid';
+import { executionToAGGridAdapter, getParsedFields, getTreeLeaves } from '../../../helpers/agGrid';
 import { ICellRendererParams } from 'ag-grid';
 
 const intl = createIntlMock();

@@ -27,7 +27,8 @@ import {
     getIdsFromUri,
     ROW_TOTAL,
     assortDimensionHeaders,
-    getParsedFields
+    getParsedFields,
+    getTreeLeaves
 } from '../../helpers/agGrid';
 
 import { LoadingComponent } from '../simple/LoadingComponent';
@@ -146,23 +147,6 @@ export const indexOfTreeNode = (
         }
     }
     return null;
-};
-
-export const getTreeLeaves = (tree: any, getChildren = (node: any) => node && node.children) => {
-    const leaves = [];
-    const nodes = Array.isArray(tree) ? [...tree] : [tree];
-    let node;
-    let children;
-    while (
-        // tslint:disable-next-line:no-conditional-assignment ban-comma-operator
-        node = nodes.shift(), children = getChildren(node),
-        ((children && children.length) || (leaves.push(node) && nodes.length))
-    ) {
-        if (children) {
-            nodes.push(...children);
-        }
-    }
-    return leaves;
 };
 
 export const getSortItemByColId = (
