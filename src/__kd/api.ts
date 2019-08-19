@@ -1,5 +1,13 @@
 // (C) 2007-2018 GoodData Corporation
 import { SDK } from '@gooddata/gooddata-js';
+import { VisualizationInput } from '@gooddata/typings';
+
+export interface IKdContext {
+    projectId: string;
+    clientId?: string;
+    userId: string;
+    api: IKdApi;
+}
 
 export interface IKdApi {
     /**
@@ -9,13 +17,11 @@ export interface IKdApi {
     addListener(listener: EventListener): void;
 
     /**
-     * Allows registration of middleware.
+     * Allows registration of props interceptors.
      *
-     * @param m
+     * @param pi
      */
-    addMiddleware(m: IMiddleware): void;
-
-    onDispose(fun: () => void): void;
+    addPropsInterceptors(pi: IPropsInterceptors): void;
 
     /**
      * Returns a ready-to-use instance of gooddata.js
@@ -31,61 +37,83 @@ export interface IKdApi {
      * Returns an API to manipulate filters on the dashboard.
      */
     filtersApi(): IFiltersApi;
+
+    /**
+     * Register a function to call before the plugin gets unloaded.
+     * @param fun
+     */
+    onDispose(fun: (context: IKdContext) => void): void;
 }
 
 //
 //
 //
-
-export interface IKdContext {
-    projectId: string;
-    clientId?: string;
-    userId: string;
-    api: IKdApi;
-}
 
 export interface IKdElement {
     identifier: string;
+    type: string;
 
-    submit(action: IKdAction): void;
+    /**
+     * Actions tell element to do something. If an action is not supported by the element, nothing happens.
+     * Action is processed asynchronously.
+     *
+     * @param action
+     */
+    submit(action: IKdAction): Promise<void>;
 }
 
+export interface IKdFilterProps {
+    visible: boolean;
+    filterDefinition: VisualizationInput.IFilter;
+}
 export interface IKdFilter extends IKdElement {
-
+    props: IKdFilterProps;
 }
 
-export interface IVisData {
-    buckets: any; // TODO concrete types
-    properties: any; // TODO concrete types
+export interface IKdVisProps {
+    visible: boolean;
+    buckets: any;
+    properties: any;
 }
-
-export type MiddlewareData = IVisData;
-
-export interface IMiddlwareInput {
-    context: IKdContext;
-    element: IKdElement;
-    data: MiddlewareData;
-}
-
-export interface IMiddleware {
-    // Called _before_ initial render
-    onInit?: (input: IMiddlwareInput) => MiddlewareData;
-    // Called on each render after the initial
-    onUpdate?: (input: IMiddlwareInput) => MiddlewareData;
-}
-
 export interface IKdVis extends IKdElement {
-    getBuckets(): any;
-    getProperties(): any;
+    props: IKdVisProps;
 }
 
-export interface IKdHeader extends IKdElement {
-    getText(): string;
+export interface IKdKpiProps {
+    visible: boolean;
+}
+export interface IKdKpi extends IKdElement {
+    props: IKdKpiProps;
 }
 
-export interface IKdComponent extends IKdElement {
+//
+//
+//
 
+/**
+ * Props interceptors allow programmers to register functions to manipulate filter, KPI and visualization
+ * component props at defined points their lifecycle. These functions are synchronous part of the component
+ * lifecycle pipeline; they are always run _before_ props are sent to the React component.
+ *
+ * The function naming convention is as follows: on[ElementType][lifecycleStage]
+ *
+ * The lifecycleStages are:
+ *
+ * - init: before first render
+ * - update: each re-render
+ * - dataLoaded: new data is available for the component
+ */
+export interface IPropsInterceptors {
+    onFilterInit?(context: IKdContext, element: IKdFilter): IKdFilter;
+    onFilterUpdate?(context: IKdContext, previous: IKdFilter, next: IKdFilter): IKdFilter;
+    onKpiInit?(context: IKdContext, element: IKdKpi): IKdKpi;
+    onKpiUpdate?(context: IKdContext, element: IKdKpi): IKdKpi;
+    onKpiDataLoaded?(context: IKdContext, element: IKdKpi, data: any): IKdKpi;
+    onVisInit?(context: IKdContext, element: IKdVis): IKdKpi;
+    onVisUpdate?(context: IKdContext, element: IKdVis): IKdKpi;
+    onVisDataLoaded?(context: IKdContext, element: IKdVis, data: any): IKdKpi;
 }
+
 
 //
 //
@@ -129,14 +157,14 @@ export interface IEvent {
 export interface IKdEvent extends IEvent {
     context: IKdContext;
     element?: IKdElement;
-    payload: KdEvents;
+    body: KdEvents;
 }
 
 export interface IKdElementInitialized {}
 export interface IKdElementRendered {}
 export interface IKdRendered {}
 
-export type KdEvents = IKdElementInitialized | IKdElementInitialized | IKdRendered;
+export type KdEvents = IKdElementInitialized | IKdElementRendered | IKdRendered;
 
 
 export type EventListener = (event: IKdEvent) => void;
@@ -149,7 +177,7 @@ export interface IKdAction {
 }
 
 export interface IKdVisAction extends IKdAction {
-    payload: BucketActions | PropertiesActions;
+    body: BucketActions | PropertiesActions | DrillActions;
 }
 
 export interface IAddFilterAction {}
@@ -164,3 +192,7 @@ export interface IAddProperty {}
 export interface IRemoveProperty {}
 export interface IUpdateProperty {}
 export type PropertiesActions = IAddProperty | IRemoveProperty | IUpdateProperty;
+
+export interface IAddDrill {}
+export interface IRemoveDrill {}
+export type DrillActions = IAddDrill | IRemoveDrill;
