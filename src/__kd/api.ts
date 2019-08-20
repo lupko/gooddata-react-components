@@ -39,6 +39,13 @@ export interface IKdApi {
     filtersApi(): IFiltersApi;
 
     /**
+     * Triggers visit of all elements on the dashboard.
+     *
+     * @param visitor visitor to use
+     */
+    accept(visitor: KdVisitor): void;
+
+    /**
      * Register a function to call before the plugin gets unloaded.
      * @param fun
      */
@@ -127,6 +134,7 @@ export interface ILayoutApi {
     addColumn(rowIndex: number, colIndex: number, col: ILayoutCol): void;
     removeRow(index: number): void;
     removeColumn(rowIndex: number, colIndex: number): void;
+    accept(visitor: IKdLayoutVisitor): void;
 }
 
 export interface ILayoutRow {
@@ -143,7 +151,7 @@ export interface ILayoutCol {
 //
 
 export interface IFiltersApi {
-
+    accept(visitor: IKdFilterVisitor): void;
 }
 
 //
@@ -160,7 +168,7 @@ export interface IKdEvent extends IEvent {
     body: KdEvents;
 }
 
-export interface IKdElementInitialized {}
+export interface IKdElementInitialized { }
 export interface IKdElementRendered {}
 export interface IKdRendered {}
 
@@ -168,6 +176,7 @@ export type KdEvents = IKdElementInitialized | IKdElementRendered | IKdRendered;
 
 
 export type EventListener = (event: IKdEvent) => void;
+
 //
 // Actions
 //
@@ -196,3 +205,18 @@ export type PropertiesActions = IAddProperty | IRemoveProperty | IUpdateProperty
 export interface IAddDrill {}
 export interface IRemoveDrill {}
 export type DrillActions = IAddDrill | IRemoveDrill;
+
+//
+// Visitors
+//
+
+export interface IKdFilterVisitor {
+    visitFilter?(filter: IKdFilter): void;
+}
+
+export interface IKdLayoutVisitor {
+    visitKpi?(kpi: IKdKpi): void;
+    visitVis?(vis: IKdVis): void;
+}
+
+export type KdVisitor = IKdFilterVisitor & IKdLayoutVisitor;
